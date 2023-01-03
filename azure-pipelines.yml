@@ -1,0 +1,53 @@
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  tag: '$(Build.BuildId)'
+  trivyVersion: 0.9.1
+
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@2
+      displayName: 'Build the Docker image'
+      inputs:
+        containerRegistry: 'dockerhub'
+        repository: 'rajputmarch2020/dotnet-mvc'
+        command: 'build'
+        Dockerfile: '$(Build.SourcesDirectory)/MvcApp/Dockerfile'
+    
+    - script: |
+       sudo apt-get install rpm
+       wget https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_Linux-64bit.deb
+       sudo dpkg -i trivy_$(trivyVersion)_Linux-64bit.deb
+       trivy -v
+      displayName: 'Download and install Trivy'
+    
+    - task: CmdLine@2
+      displayName: "Run trivy scan"
+      inputs:
+        script: |
+          trivy image rajputmarch2020/dotnet-mvc:$(Build.BuildId)
+
+    - task: CmdLine@2
+      displayName: "Validate trivy scan"
+      inputs:
+        script: |
+          trivy image --exit-code 0 --severity LOW,MEDIUM rajputmarch2020/dotnet-mvc:$(Build.BuildId)
+          #trivy image --exit-code 1 --severity HIGH,CRITICAL rajputmarch2020/dotnet-mvc:$(Build.BuildId)
+
+    - task: Docker@2
+      displayName: 'Push the image to Docker Hub'
+      inputs:
+        containerRegistry: 'dockerhub'
+        repository: 'rajputmarch2020/dotnet-mvc'
+        command: 'push'
