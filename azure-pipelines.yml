@@ -75,7 +75,7 @@ stages:
           kubernetesCluster: 'aks-test'
           command: 'upgrade'
           chartType: 'FilePath'
-          chartPath: 'charts/productsstore'
+          chartPath: 'Helm chart'
           releaseName: 'dotnet-mvc'
           arguments: '--set web.image.tag=$(Build.BuildId) --set web.image.name=dotnet-mvc --set namespace=test'
           
